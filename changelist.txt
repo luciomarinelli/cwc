@@ -1,10 +1,11 @@
 Changelist
 
-NEXT RELEASE
+20190608
 - fixed error in MySQL query to fetch the previous day
 - added site name in title bar
 - updated bots names
-- changed "https" to "http://whatismyipaddress.com" for lookup queries
+- Tracker: replaced REMOTE_ADDR with HTTP_X_FORWARDED_FOR since REMOTE_ADDR now always returns "127.0.0.2" (the variable $name remains the same)
+- added visitors geolocation thanks to Maxmind - https://www.maxmind.com using Geolite2 database with PHP plugin (whatismyipaddress.com lookup removed)
 
 20150324
 - IP lookup thanks to whatismyipaddress.com

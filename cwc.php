@@ -30,7 +30,7 @@ if ($_GET[action]=="dump" && is_numeric($_GET[id])) $siteid=$_GET[id];
 </head>
 
 <body>
-<h1>Cookieless Web Counter <span style="font-size: 10px; font-style: italic"><a href="http://www.luciomarinelli.com" target="_external" style="text-decoration: none; color: black">by Lucio Marinelli</a></span></h1>
+<h1>Cookieless Web Counter <span style="font-size: 10px; font-style: italic"><a href="https://www.luciomarinelli.com" target="_external" style="text-decoration: none; color: black">by Lucio Marinelli</a></span></h1>
 
 <?php
 
@@ -53,6 +53,8 @@ switch ($lang) {
 	$timestamp_label="Data & ora";
 	$php_self_label="Pagina visitata";
 	$remote_addr_label="Indirizzo IP";
+	$city_country_label="Città, Stato";
+    $unknown_city="sconosciuta";
 	$http_referer_label="Pagina di provenienza";
 	$http_user_agent_label="Browser del visitatore";
 
@@ -77,6 +79,8 @@ switch ($lang) {
 	$timestamp_label="Timestamp";
 	$php_self_label="php_self";
 	$remote_addr_label="remote_addr";
+	$city_country_label="City, Country";
+    $unknown_city="unknown";
 	$http_referer_label="http_referer";
 	$http_user_agent_label="http_user_agent";
 
@@ -114,12 +118,16 @@ if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 	echo "<h3>$last_visits ($_GET[n])</h3><table border=\"1px\" style=\"font-size: 12px\">";
 	echo "<div><a href=\"$_SERVER[PHP_SELF]\">$back</a></div>";
 	echo "<table>";
-	echo "<tr><th>Id</th><th>$timestamp_label</th><th>$php_self_label</th><th>$remote_addr_label</th><th>$http_referer_label</th><th>$http_user_agent_label</th></tr>";
+	echo "<tr><th>Id</th><th>$timestamp_label</th><th>$php_self_label</th><th>$remote_addr_label</th><th>$city_country_label</th><th>$http_referer_label</th><th>$http_user_agent_label</th></tr>";
 
 	for ($i=1;$i<$n_vis;$i++) {
 		$visita = mysql_fetch_assoc($result);
 		if (is_bot($visita[http_user_agent])) $stile=" style=\"color: gray\""; //Visits from bots are grayed
-		echo "<tr$stile><td>$visita[id]</td><td>$visita[timestamp]</td><td>$visita[php_self]</td><td><a href=\"http://whatismyipaddress.com/ip/$visita[remote_addr]\" target=\"_blank\">$visita[remote_addr]</a></td><td>$visita[http_referer]</td><td>$visita[http_user_agent]</td></tr>";
+        $geolocate=unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
+        if ($geolocate['geoplugin_city'] == "") $geo_city=$unknown_city;
+        else $geo_city=$geolocate['geoplugin_city'];
+        $geo_country=$geolocate['geoplugin_countryName'];
+		echo "<tr$stile><td>$visita[id]</td><td>$visita[timestamp]</td><td>$visita[php_self]</td><td>$visita[remote_addr]</td><td>$geo_city, $geo_country</td><td>$visita[http_referer]</td><td>$visita[http_user_agent]</td></tr>";
 		$stile="";
 		}
 
@@ -163,7 +171,7 @@ else {
 
 		//count yesterday's visitors
 		$q_visitatori_ieri=("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY GROUP BY remote_addr");
-
+http://192.168.1.1/ui/login
 		$r_visitatori_ieri=mysql_query ($q_visitatori_ieri) or die (mysql_error());
 
 		$visitatori_ieri=mysql_num_rows ($r_visitatori_ieri);
@@ -175,7 +183,7 @@ else {
 
 ?>
 
-<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">v. 20150324</div>
+<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">Version 20190608</div>
 
 </body>
 </html>

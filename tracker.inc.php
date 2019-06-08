@@ -18,7 +18,7 @@ $tablename="contatore";
 //-------CONFIGURATION ENDS HERE-----
 
 $php_self=$_SERVER['PHP_SELF'];
-$remote_addr=$_SERVER['REMOTE_ADDR'];
+$remote_addr=$_SERVER['HTTP_X_FORWARDED_FOR'];
 $http_referer=$_SERVER['HTTP_REFERER'];
 $http_user_agent=$_SERVER['HTTP_USER_AGENT'];
 
