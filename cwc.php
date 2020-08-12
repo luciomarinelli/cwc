@@ -2,6 +2,10 @@
 //Cookieless Web Counter by Lucio Marinelli
 //Please see attached GNU GENERAL PUBLIC LICENSE version 3
 
+//This script uses geoPlugin free service for IP geolocation, please read Acceptable Use Policy https://www.geoplugin.com/aup
+//REMEMBER that if you send more than 120 lookups per minute your IP will be banned for 1 hour
+//if you send more than 1500 requests per minute will get you blocked PERMANENTLY 
+
 
 require ("config.inc.php"); //include configuration file
 
@@ -18,11 +22,27 @@ function is_bot($text) {
 }
 
 
+//function to replace file_get_contents() function so it works if allow_url_fopen=0 in php.ini (much slower but works)
+function curl_get_file_contents($URL)
+    {
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($c, CURLOPT_URL, $URL);
+        $contents = curl_exec($c);
+        curl_close($c);
+
+        if ($contents) return $contents;
+        else return FALSE;
+    }
+
+//reset ban_flag
+$ban_flag=0;
+
 //get site id for <TITLE> & dump page, preventing injection
 if ($_GET[action]=="dump" && is_numeric($_GET[id])) $siteid=$_GET[id];
 
-
 ?>
+
 
 <html>
 <head>
@@ -63,6 +83,7 @@ switch ($lang) {
 	$db_connection_error1="Errore nella connessione al database ";
 	$db_connection_error2="";
 	$attack="Attacco rilevato!";
+    $banned="BANNATO!";
 	break;
 
 	default: //DEFAULT ENGLISH LANGUAGE
@@ -89,6 +110,7 @@ switch ($lang) {
 	$db_connection_error1="Error connecting to ";
 	$db_connection_error2=" database!";
 	$attack="Attack detected!";
+    $banned="BANNED!";
 	break;
 	}
 
@@ -100,13 +122,19 @@ $number_of_sites=count($sitename)+1;
 //dump last visits
 if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 
+    //check if too many requests have been sent to geoPlugin to prevent permanent ban
+    if ($ban_flag=0) {
+        $ban_test=curl_get_file_contents('http://www.geoplugin.net/php.gp?ip=1.1.1.1');
+        if (strpos ($ban_test, '403 Forbidden')) $ban_flag=1;
+    }
+
 	//connect to MySQL server
 	$conn = mysql_connect($dbhost[$siteid],$dbuser[$siteid],$dbpass[$siteid]) or die ("$mysql_server_error");
 
 	//connect to database
 	mysql_select_db($dbname[$siteid],$conn) or die ("$db_connection_error1"."$dbname[$siteid]"."$db_connection_error2");
 
-	//show last 50-100-200 (n) records for the selected site
+	//show last 20-50-100 (n) records for the selected site
 	$query = ("SELECT * FROM $tablename[$siteid] ORDER BY timestamp DESC");
 	$result = mysql_query ($query) or die (mysql_error());
 
@@ -123,10 +151,19 @@ if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 	for ($i=1;$i<$n_vis;$i++) {
 		$visita = mysql_fetch_assoc($result);
 		if (is_bot($visita[http_user_agent])) $stile=" style=\"color: gray\""; //Visits from bots are grayed
-        $geolocate=unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
-        if ($geolocate['geoplugin_city'] == "") $geo_city=$unknown_city;
-        else $geo_city=$geolocate['geoplugin_city'];
-        $geo_country=$geolocate['geoplugin_countryName'];
+        if ($ban_flag=1) {
+            $geo_city=$banned;
+            $geo_country=$banned;
+        } else {
+            if (ini_get('allow_url_fopen')) {
+                $geolocate=unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
+            } else {
+                $geolocate=unserialize(curl_get_file_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
+            }
+            if ($geolocate['geoplugin_city'] == "") $geo_city=$unknown_city;
+            else $geo_city=$geolocate['geoplugin_city'];
+            $geo_country=$geolocate['geoplugin_countryName'];
+        }
 		echo "<tr$stile><td>$visita[id]</td><td>$visita[timestamp]</td><td>$visita[php_self]</td><td>$visita[remote_addr]</td><td>$geo_city, $geo_country</td><td>$visita[http_referer]</td><td>$visita[http_user_agent]</td></tr>";
 		$stile="";
 		}
@@ -150,40 +187,32 @@ else {
 
 		//count today's visits
 		$q_visite_odierne=("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()");
-
 		$r_visite_odierne=mysql_query ($q_visite_odierne) or die (mysql_error());
-
 		$visite_odierne=mysql_num_rows ($r_visite_odierne);
 
 		//count today's visitors
 		$q_visitatori_odierni=("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE() GROUP BY remote_addr");
-
 		$r_visitatori_odierni=mysql_query ($q_visitatori_odierni) or die (mysql_error());
-
 		$visitatori_odierni=mysql_num_rows ($r_visitatori_odierni);
 
 		//count yesterday's visits
 		$q_visite_ieri=("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY");
-
 		$r_visite_ieri=mysql_query ($q_visite_ieri) or die (mysql_error());
-
 		$visite_ieri=mysql_num_rows ($r_visite_ieri);
 
 		//count yesterday's visitors
 		$q_visitatori_ieri=("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY GROUP BY remote_addr");
-http://192.168.1.1/ui/login
 		$r_visitatori_ieri=mysql_query ($q_visitatori_ieri) or die (mysql_error());
-
 		$visitatori_ieri=mysql_num_rows ($r_visitatori_ieri);
 
-		echo "<tr><td>$sitename[$siteid]</td><td>$visite_odierne</td><td>$visitatori_odierni</td><td>$visite_ieri</td><td>$visitatori_ieri</td><td><a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=50\">50</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=100\">100</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=200\">200</a></td></tr>";
+		echo "<tr><td>$sitename[$siteid]</td><td>$visite_odierne</td><td>$visitatori_odierni</td><td>$visite_ieri</td><td>$visitatori_ieri</td><td><a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=20\">20</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=50\">50</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=100\">100</a></td></tr>";
 		}
 	echo "</table>";
 	}
 
 ?>
 
-<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">Version 20190608</div>
+<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">Version 20200812</div>
 
 </body>
 </html>

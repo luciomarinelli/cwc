@@ -1,5 +1,10 @@
 Changelist
 
+20200812
+- added alternate CURL function to fetch geoPlugin (formerly Geolite2) locations if allow_url_fopen=0 in php.ini
+- added controls to prevent permanent geoPlugin ban because of excessive requests
+- number of visits to dump reduced to 20-50-100 to limit the risk of a temporary ban
+
 20190608
 - fixed error in MySQL query to fetch the previous day
 - added site name in title bar
