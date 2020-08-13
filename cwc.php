@@ -123,7 +123,7 @@ $number_of_sites=count($sitename)+1;
 if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 
     //check if too many requests have been sent to geoPlugin to prevent permanent ban
-    if ($ban_flag=0) {
+    if ($ban_flag==0) {
         $ban_test=curl_get_file_contents('http://www.geoplugin.net/php.gp?ip=1.1.1.1');
         if (strpos ($ban_test, '403 Forbidden')) $ban_flag=1;
     }
@@ -151,7 +151,7 @@ if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 	for ($i=1;$i<$n_vis;$i++) {
 		$visita = mysql_fetch_assoc($result);
 		if (is_bot($visita[http_user_agent])) $stile=" style=\"color: gray\""; //Visits from bots are grayed
-        if ($ban_flag=1) {
+        if ($ban_flag==1) {
             $geo_city=$banned;
             $geo_country=$banned;
         } else {
