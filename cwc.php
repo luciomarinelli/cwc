@@ -39,7 +39,7 @@ function curl_get_file_contents($URL)
 $ban_flag=0;
 
 //get site id for <TITLE> & dump page, preventing injection
-if ($_GET[action]=="dump" && is_numeric($_GET[id])) $siteid=$_GET[id];
+if ($_GET['action']=="dump" && is_numeric($_GET['id'])) $siteid=$_GET['id'];
 
 ?>
 
@@ -55,7 +55,7 @@ if ($_GET[action]=="dump" && is_numeric($_GET[id])) $siteid=$_GET[id];
 <?php
 
 //Detect language from HTTP_ACCEPT_LANGUAGE string
-$language=($_SERVER[HTTP_ACCEPT_LANGUAGE]);
+$language=($_SERVER['HTTP_ACCEPT_LANGUAGE']);
 $lang=substr($language,0,2);
 
 switch ($lang) {
@@ -118,9 +118,8 @@ switch ($lang) {
 //count the number of sites
 $number_of_sites=count($sitename)+1;
 
-
 //dump last visits
-if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
+if ($_GET['action']=="dump" && $_GET['id']<$number_of_sites) {
 
     //check if too many requests have been sent to geoPlugin to prevent permanent ban
     if ($ban_flag==0) {
@@ -128,18 +127,17 @@ if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
         if (strpos ($ban_test, '403 Forbidden')) $ban_flag=1;
     }
 
-	//connect to MySQL server
-	$conn = mysql_connect($dbhost[$siteid],$dbuser[$siteid],$dbpass[$siteid]) or die ("$mysql_server_error");
+    //connect to database
+    $mysqli = new mysqli($dbhost[$siteid], $dbuser[$siteid], $dbpass[$siteid], $dbname[$siteid]);
+    if ($mysqli->connect_errno) echo "DB connection error";
 
-	//connect to database
-	mysql_select_db($dbname[$siteid],$conn) or die ("$db_connection_error1"."$dbname[$siteid]"."$db_connection_error2");
 
 	//show last 20-50-100 (n) records for the selected site
 	$query = ("SELECT * FROM $tablename[$siteid] ORDER BY timestamp DESC");
-	$result = mysql_query ($query) or die (mysql_error());
+    if (!$result = $mysqli->query($query)) echo "Query error";
 
 	//get number of visits preventing injection
-	if (is_numeric($_GET[n])) $n_vis=$_GET[n]+1;
+	if (is_numeric($_GET['n'])) $n_vis=$_GET['n']+1;
 	else die ("$attack");
 
 	echo "<h2>$sitename[$siteid]</h2>";
@@ -149,16 +147,16 @@ if ($_GET[action]=="dump" && $_GET[id]<$number_of_sites) {
 	echo "<tr><th>Id</th><th>$timestamp_label</th><th>$php_self_label</th><th>$remote_addr_label</th><th>$city_country_label</th><th>$http_referer_label</th><th>$http_user_agent_label</th></tr>";
 
 	for ($i=1;$i<$n_vis;$i++) {
-		$visita = mysql_fetch_assoc($result);
-		if (is_bot($visita[http_user_agent])) $stile=" style=\"color: gray\""; //Visits from bots are grayed
+		$visita = $result->fetch_assoc();
+		if (is_bot($visita['http_user_agent'])) $stile=" style=\"color: gray\""; //Visits from bots are grayed
         if ($ban_flag==1) {
             $geo_city=$banned;
             $geo_country=$banned;
         } else {
             if (ini_get('allow_url_fopen')) {
-                $geolocate=unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
+                $geolocate=unserialize(file_get_contents('http://www.geoplugin.net/php.gp?ip='.$visita['remote_addr']));
             } else {
-                $geolocate=unserialize(curl_get_file_contents('http://www.geoplugin.net/php.gp?ip='.$visita[remote_addr]));
+                $geolocate=unserialize(curl_get_file_contents('http://www.geoplugin.net/php.gp?ip='.$visita['remote_addr']));
             }
             if ($geolocate['geoplugin_city'] == "") $geo_city=$unknown_city;
             else $geo_city=$geolocate['geoplugin_city'];
@@ -179,31 +177,29 @@ else {
 
 	for ($siteid=1; $siteid<$number_of_sites; $siteid++) {
 
-		//connect to MySQL server
-		$conn = mysql_connect($dbhost[$siteid],$dbuser[$siteid],$dbpass[$siteid]) or die("$mysql_server_error");
-
-		//connect to database
-		mysql_select_db($dbname[$siteid],$conn) or die("$db_connection_error1"."$dbname[$siteid]"."$db_connection_error2");
+        //connect to database
+        $mysqli = new mysqli($dbhost[$siteid], $dbuser[$siteid], $dbpass[$siteid], $dbname[$siteid]);
+        if ($mysqli->connect_errno) echo "DB connection error";
 
 		//count today's visits
-		$q_visite_odierne=("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()");
-		$r_visite_odierne=mysql_query ($q_visite_odierne) or die (mysql_error());
-		$visite_odierne=mysql_num_rows ($r_visite_odierne);
+		$q_visite_odierne = ("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()");
+        if (!$result = $mysqli->query($q_visite_odierne)) echo "Query error";
+		$visite_odierne = $result->num_rows;
 
 		//count today's visitors
-		$q_visitatori_odierni=("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE() GROUP BY remote_addr");
-		$r_visitatori_odierni=mysql_query ($q_visitatori_odierni) or die (mysql_error());
-		$visitatori_odierni=mysql_num_rows ($r_visitatori_odierni);
+		$q_visitatori_odierni = ("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE() GROUP BY remote_addr");
+        if (!$result = $mysqli->query($q_visitatori_odierni)) echo "Query error";
+		$visitatori_odierni = $result->num_rows;
 
 		//count yesterday's visits
-		$q_visite_ieri=("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY");
-		$r_visite_ieri=mysql_query ($q_visite_ieri) or die (mysql_error());
-		$visite_ieri=mysql_num_rows ($r_visite_ieri);
+		$q_visite_ieri = ("SELECT timestamp FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY");
+        if (!$result = $mysqli->query($q_visite_ieri)) echo "Query error";
+		$visite_ieri = $result->num_rows;
 
 		//count yesterday's visitors
-		$q_visitatori_ieri=("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY GROUP BY remote_addr");
-		$r_visitatori_ieri=mysql_query ($q_visitatori_ieri) or die (mysql_error());
-		$visitatori_ieri=mysql_num_rows ($r_visitatori_ieri);
+		$q_visitatori_ieri = ("SELECT remote_addr FROM $tablename[$siteid] WHERE DATE(timestamp)=CURDATE()- INTERVAL 1 DAY GROUP BY remote_addr");
+        if (!$result = $mysqli->query($q_visitatori_ieri)) echo "Query error";
+		$visitatori_ieri = $result->num_rows;
 
 		echo "<tr><td>$sitename[$siteid]</td><td>$visite_odierne</td><td>$visitatori_odierni</td><td>$visite_ieri</td><td>$visitatori_ieri</td><td><a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=20\">20</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=50\">50</a>&nbsp;&nbsp;<a href=\"$_SERVER[PHP_SELF]?id=$siteid&amp;action=dump&amp;n=100\">100</a></td></tr>";
 		}
@@ -212,7 +208,7 @@ else {
 
 ?>
 
-<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">Version 20200812</div>
+<div style="font-family: sans serif; font-size: 10px; margin-top: 5em; text-align: right">Version 20201225</div>
 
 </body>
 </html>

@@ -22,10 +22,10 @@ $remote_addr=$_SERVER['HTTP_X_FORWARDED_FOR'];
 $http_referer=$_SERVER['HTTP_REFERER'];
 $http_user_agent=$_SERVER['HTTP_USER_AGENT'];
 
-$conn = mysql_connect($dbhost,$dbuser,$dbpass);
-mysql_select_db($dbname,$conn);
 $query = ("INSERT INTO $tablename (php_self,remote_addr,http_referer,http_user_agent) VALUES ('$php_self','$remote_addr','$http_referer','$http_user_agent')");
-$result = mysql_query ($query);
+$mysqli = new mysqli($dbhost, $dbuser, $dbpass, $dbname);
+if ($mysqli->connect_errno) echo "DB connection error";
+if (!$result = $mysqli->query($query)) echo "Query error";
 
 //Cookieless Web Counter - tracker code ends here
 ?>

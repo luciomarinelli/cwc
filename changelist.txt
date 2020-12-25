@@ -1,5 +1,8 @@
 Changelist
 
+20201225
+- updated PHP syntax and functions to comply with PHP versions since 7.0.0
+
 20200812
 - added alternate CURL function to fetch geoPlugin (formerly Geolite2) locations if allow_url_fopen=0 in php.ini
 - added controls to prevent permanent geoPlugin ban because of excessive requests
